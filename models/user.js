@@ -1,13 +1,11 @@
 
 const orm = require('./sequelize-config');
 
-const User = orm.sequelize.define('user', {
+const User = orm.sequelize.define('users', {
    id: {
       type: orm.Sequelize.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
-      field: 'id',
-      allowNull: false
+      autoIncrement: true
    },
    name: {
       type: orm.Sequelize.STRING
@@ -19,7 +17,8 @@ const User = orm.sequelize.define('user', {
       type: orm.Sequelize.STRING
    }
 }, {
-   timestamps: false
+   timestamps: false,
+   freezeTableName: true
 });
 
 const findMatch = (name, password) => 
@@ -32,7 +31,6 @@ const findMatch = (name, password) =>
 
 const create = (name, password, email) => {
    let newUser = User.build({
-      id: 2,
       name,
       password,
       email

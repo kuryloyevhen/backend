@@ -14,20 +14,52 @@ const auth = require('./routers/auth');
 const game = require('./routers/game');
 
 const stoneage = io.of('/stoneage');
+var playerStatistic = {};
+var playerMovement = {};
 
 stoneage.on('connection', socket => {
-   console.log('connected to socket');
-   socket.on('message', msg => {
-      stoneage.emit('message', msg);
-      console.log(`message \"${msg}\" was sent`);
-   })
+
    socket.on('join', roomName => {
+      playerStatistic[socket.id] = {
+         wood: 0,
+         clay: 0,
+         stone: 0,
+         gold: 0,
+         agronomyLevel: 0,
+         workTools: 0,
+         dwellings: {},
+         civilizationCards: {},
+         points: 0,
+         population: 5,
+         foodAmount: 12
+      }
       socket.join(roomName);
-      console.log(`joined to ${roomName} room`);
    })
+
+   socket.on('message', body => {
+      stoneage.to(body.room).emit('message', body.message);
+   })
+
+   socket.on('movement', data => {
+      var player = playerMovement[socket.id] = {};
+   })
+
+   socket.on('return', () => {
+
+   })
+
+   socket.on('feed', () => {
+      let player = playerStatistic[socket.id];
+      let neededFood = player.population - player.agronomyLevel;
+      if(neededFood > 0) {
+         player.foodAmount - neededFood;
+      }
+   })
+
    socket.on('disconnect', () => {
       console.log('disconnected');
    })
+
 })
 
 
@@ -47,9 +79,9 @@ app.use('/games', game);
 
 app.use( (err, req, res, next) => {
    res.status(err.status || 500);
-   res.render('error', {
+   res.json({
       message: err.message,
-      error: {}
+      error: err
    });
 });
 

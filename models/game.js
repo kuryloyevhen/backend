@@ -1,13 +1,11 @@
 
 const orm = require('./sequelize-config');
 
-const Room = orm.sequelize.define('room', {
+const Room = orm.sequelize.define('rooms', {
    id: {
       type: orm.Sequelize.INTEGER,
-      allowNull: false,
       primaryKey: true,
-      autoIncrement: true,
-      field: 'id'
+      autoIncrement: true
    },
    name: {
       type: orm.Sequelize.STRING,
@@ -15,7 +13,8 @@ const Room = orm.sequelize.define('room', {
       primaryKey: true
    }
 }, {
-   timestamps: false
+   timestamps: false,
+   freezeTableName: true
 });
 
 const findAll = () => Room.findAll();
@@ -25,7 +24,7 @@ const create = (id, name) => {
       id,
       name
    });
-   return newRoom.save().then( () => Room.findAll() );
+   return newRoom.save();
 };
 
 const roomModel = {

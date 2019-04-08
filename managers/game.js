@@ -1,6 +1,5 @@
 
 const model = require('../models/game');
-const io = require('../server');
 
 const get = () => model.findAll();
 
