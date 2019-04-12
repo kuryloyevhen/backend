@@ -6,6 +6,8 @@ const server = http.Server(app);
 const socketIo = require('socket.io');
 const io = socketIo(server);
 const bodyParser = require('body-parser');
+const redisAdapter = require('socket.io-redis');
+io.adapter(redisAdapter({host: '127.0.0.1', port: 6379}));
 
 const cors = require('./middlewares/cors');
 const session = require('./middlewares/session');
@@ -14,13 +16,25 @@ const auth = require('./routers/auth');
 const game = require('./routers/game');
 
 const stoneage = io.of('/stoneage');
-var playerStatistic = {};
-var playerMovement = {};
+var playerStatistics = {};
+var playerMovements = {};
+var playerSteps;
+var playerStats;
 
 stoneage.on('connection', socket => {
 
    socket.on('join', roomName => {
-      playerStatistic[socket.id] = {
+      playerSteps = playerMovements[socket.id] = {
+         food: 0,
+         wood: 0,
+         clay: 0,
+         stone: 0,
+         gold: 0,
+         agronomy: 0,
+         smithy: 0,
+         reproduction: 0
+      };
+      playerStats = playerStatistics[socket.id] = {
          wood: 0,
          clay: 0,
          stone: 0,
@@ -31,9 +45,11 @@ stoneage.on('connection', socket => {
          civilizationCards: {},
          points: 0,
          population: 5,
-         foodAmount: 12
+         food: 12
       }
       socket.join(roomName);
+      socket.emit('changes', playerStats);
+      socket.emit('changePhase', 'movement');
    })
 
    socket.on('message', body => {
@@ -41,19 +57,52 @@ stoneage.on('connection', socket => {
    })
 
    socket.on('movement', data => {
-      var player = playerMovement[socket.id] = {};
+      if (playerStats.population >= data.amount) {
+			 if (data.resource) {
+            playerSteps[data.resource] += data.amount;
+            playerStats.population -= data.amount;
+      	}
+      	if (data.staff) {
+         	player[data.staff] += data.amount;
+				playerStats.population -= data.amount;
+         }
+         socket.emit('changes', playerStats);
+         stoneage.to(data.room).emit('movement', playerSteps);
+		} else {
+			socket.emit('movementError', 'Not enough people');
+      }
+      if (playerStats.population === 0) {
+         socket.emit('changePhase', 'return');
+      }
+     
+      
    })
 
-   socket.on('return', () => {
+   socket.on('changes', data => {
+      for (let prop in data) {
+         if (data.hasOwnProperty(prop) && data.propertyIsEnumerable(prop)){
+            playerStats[prop] = data[prop];
+         }
+      }
+   })
 
+   socket.on('return', data => {
+      playerStats.population += data.people;
+      playerStats[data.resourceName] = data.resourceAmount;
+      socket.emit('changes', playerStats);
+      socket.emit('return', data);
+      if (data === 'end') {
+         socket.emit('changePhase', 'feed');
+      }
    })
 
    socket.on('feed', () => {
-      let player = playerStatistic[socket.id];
-      let neededFood = player.population - player.agronomyLevel;
+      let neededFood = playerStats.population - playerStats.agronomyLevel;
       if(neededFood > 0) {
-         player.foodAmount - neededFood;
+         playerStats.food -= neededFood;
       }
+      socket.emit('changes', playerStats);
+      socket.emit('changePhase', 'movement');
    })
 
    socket.on('disconnect', () => {
@@ -67,7 +116,7 @@ app.use( (req, res, next) => {
    res.io = io;
    next();
 })
-app.use(session);
+app.use(session.session);
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(cors);

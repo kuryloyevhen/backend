@@ -26,4 +26,9 @@ const sessionOptions = {
    resave: false,
 }
 
-module.exports = session(sessionOptions);
+const sessionObject = {
+	session: session(sessionOptions),
+	redisClient
+}
+
+module.exports = sessionObject;
