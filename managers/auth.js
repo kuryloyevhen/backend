@@ -1,15 +1,15 @@
 
-const model = require('../models/user');
+const model = require('../models/user')
 
-const login = (name, password) => 
-   model.findMatch(name, password);
+const login = (name, password) =>
+  model.findMatch(name, password)
 
 const register = (name, password, email) =>
-   model.create(name, password, email);
+  model.create(name, password, email)
 
 const userManager = {
-   login,
-   register
-};
+  login,
+  register
+}
 
-module.exports = userManager;
+module.exports = userManager

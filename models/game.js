@@ -1,35 +1,35 @@
 
-const orm = require('./sequelize-config');
+const orm = require('./sequelize-config')
 
 const Room = orm.sequelize.define('rooms', {
-   id: {
-      type: orm.Sequelize.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-   },
-   name: {
-      type: orm.Sequelize.STRING,
-      allowNull: false,
-      primaryKey: true
-   }
+  id: {
+    type: orm.Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: orm.Sequelize.STRING,
+    allowNull: false,
+    primaryKey: true
+  }
 }, {
-   timestamps: false,
-   freezeTableName: true
-});
+  timestamps: false,
+  freezeTableName: true
+})
 
-const findAll = () => Room.findAll();
+const findAll = () => Room.findAll()
 
 const create = (id, name) => {
-   let newRoom = Room.build({
-      id,
-      name
-   });
-   return newRoom.save();
-};
-
-const roomModel = {
-   findAll,
-   create
+  let newRoom = Room.build({
+    id,
+    name
+  })
+  return newRoom.save()
 }
 
-module.exports = roomModel;
+const roomModel = {
+  findAll,
+  create
+}
+
+module.exports = roomModel

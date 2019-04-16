@@ -1,15 +1,13 @@
 
-const model = require('../models/game');
+const model = require('../models/game')
 
-const get = () => model.findAll();
+const get = () => model.findAll()
 
-const create = (id, name) => model.create(id, name);
-
-
+const create = (id, name) => model.create(id, name)
 
 const gameManager = {
-   get,
-   create
-};
+  get,
+  create
+}
 
-module.exports = gameManager;
+module.exports = gameManager
