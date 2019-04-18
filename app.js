@@ -23,7 +23,8 @@ var playerIndex = 0
 
 stoneage.on('connection', socket => {
   socket.on('join', roomName => {
-    players.push(socket.id);
+    players.push(socket.id)
+    players2.push(socket.id)
     playerMovements[socket.id] = {
       food: 0,
       wood: 0,
@@ -32,7 +33,7 @@ stoneage.on('connection', socket => {
       gold: 0,
       agronomy: 0,
       smithy: 0,
-      reproduction: 0,
+      population: 0,
       id: socket.id
     }
     playerStatistics[socket.id] = {
@@ -40,8 +41,8 @@ stoneage.on('connection', socket => {
       clay: 0,
       stone: 0,
       gold: 0,
-      agronomyLevel: 0,
-      workTools: 0,
+      agronomy: 0,
+      smithy: 0,
       dwellings: {},
       civilizationCards: {},
       points: 0,
@@ -50,13 +51,13 @@ stoneage.on('connection', socket => {
       id: socket.id
     }
     socket.join(roomName)
-    socket.emit('setID', socket.id);
+    socket.emit('setID', socket.id)
     socket.emit('changes', playerStatistics[socket.id])
     socket.emit('changePhase', 'movement')
     redisClient.lrange('msgs', 0, -1, (err, reply) => {
       stoneage.to(roomName).emit('message', reply)
     })
-    stoneage.to(roomName).emit('changePlayer', players[playerIndex]);
+    stoneage.to(roomName).emit('changePlayer', players[playerIndex])
   })
 
   socket.on('message', body => {
@@ -67,9 +68,8 @@ stoneage.on('connection', socket => {
   })
 
   socket.on('movement', data => {
-    console.log(playerIndex);
-    playerIndex++;
     if (playerStatistics[socket.id].population >= data.amount) {
+      playerIndex++
       if (data.resource) {
         playerMovements[socket.id][data.resource] += data.amount
         playerStatistics[socket.id].population -= data.amount
@@ -79,56 +79,63 @@ stoneage.on('connection', socket => {
         playerStatistics[socket.id].population -= data.amount
       }
       socket.emit('changes', playerStatistics[socket.id])
-      redisClient.set('playerSteps', JSON.stringify(playerMovements[socket.id]));
+      redisClient.set('playerSteps', JSON.stringify(playerMovements[socket.id]))
       redisClient.get('playerSteps', (err, reply) => {
-        stoneage.to(data.room).emit('movement', JSON.parse(reply));
+        stoneage.to(data.room).emit('movement', JSON.parse(reply))
       })
-      if (playerStatistics[socket.id].population === 0) {         // something is wrong with conditions
-         let elem = players.slice(playerIndex, playerIndex + 1);
-         players2.push(elem[0]);
-         stoneage.to(data.room).emit('changePlayer', players[playerIndex]);
-       }
-       if (players.length === 0) {
-          players = players2;
-          players2 = [];
-       }
       if (playerIndex < players.length) {
-         stoneage.to(data.room).emit('changePlayer', players[playerIndex]);
-      } else {
-         stoneage.to(data.room).emit('changePlayer', players[0]);
-         playerIndex = 0;
-      }
+         stoneage.to(data.room).emit('changePlayer', players[playerIndex])
+       } else {
+         stoneage.to(data.room).emit('changePlayer', players[0])
+         playerIndex = 0
+       }
     } else {
       socket.emit('movementError', 'Not enough people')
     }
+    if (playerStatistics[socket.id].population === 0) {
+      players.splice(playerIndex - 1, 1)
+      stoneage.to(data.room).emit('changePlayer', players[--playerIndex])
+      if (players.length === 0) {
+       players = players2
+       playerIndex = 0
+       stoneage.to(data.room).emit('changePhase', 'return')
+       stoneage.to(data.room).emit('changePlayer', players[playerIndex])
+     }
+    } 
   })
 
   socket.on('changes', data => {
     for (let prop in data) {
       if (data.hasOwnProperty(prop) && data.propertyIsEnumerable(prop)) {
-         playerStatistics[socket.id][prop] = data[prop]
+        playerStatistics[socket.id][prop] = data[prop]
       }
     }
+  })
+
+  socket.on('changePlayer', room => {
+     stoneage.to(room).emit(players[++playerIndex])
   })
 
   socket.on('return', data => {
     playerStatistics[socket.id].population += data.people
     playerMovements[socket.id][data.resourceName] = 0
-    playerStatistics[socket.id][data.resourceName] = data.resourceAmount
+    playerStatistics[socket.id][data.resourceName] += data.resourceAmount
     socket.emit('changes', playerStatistics[socket.id])
     stoneage.emit('return', data)
-    if (data === 'end') {
-      socket.emit('changePhase', 'feed')
-    }
   })
 
-  socket.on('feed', () => {
-    let neededFood = playerStatistics[socket.id].population - playerStatistics[socket.id].agronomyLevel
+  socket.on('feed', room => {
+    let neededFood = playerStatistics[socket.id].population - playerStatistics[socket.id].agronomy
     if (neededFood > 0) {
       playerStatistics[socket.id].food -= neededFood
     }
     socket.emit('changes', playerStatistics[socket.id])
-    socket.emit('changePhase', 'movement')
+      stoneage.to(room).emit('changePlayer', players[++playerIndex])
+      if (playerIndex >= players.length) {
+         playerIndex = 0
+         stoneage.to(room).emit('changePhase', 'movement')
+         stoneage.to(room).emit('changePlayer', players[playerIndex])
+      } 
   })
 
   socket.on('disconnect', () => {})
